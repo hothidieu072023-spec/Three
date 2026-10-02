@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f18" />
+  <title>3D Cube Test</title>
+  <style>
+    :root {
+      --bg: #080b12;
+      --panel: rgba(17, 23, 35, 0.9);
+      --panel-border: rgba(255, 255, 255, 0.09);
+      --text: #f3f6ff;
+      --muted: #9ca7ba;
+      --accent: #6ea8ff;
+      --card: rgba(255, 255, 255, 0.045);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #viewport {
+      position: absolute;
+      inset: 0;
+    }
+    #viewport canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    .title {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .title p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .panel-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      min-height: 42px;
+      padding: 0 15px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      background: rgba(22, 30, 45, 0.88);
+      color: var(--text);
+      font-weight: 600;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      cursor: pointer;
+    }
+    .panel[hidden] {
+      display: none !important;
+    }
+    .panel {
+      position: absolute;
+      top: 74px;
+      right: 18px;
+      z-index: 10;
+      width: min(350px, calc(100vw - 36px));
+      max-height: calc(100vh - 92px);
+      overflow-y: auto;
+      padding: 18px;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      scrollbar-width: thin;
+    }
+    .panel::-webkit-scrollbar {
+      width: 5px;
+    }
+    .panel::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 99px;
+    }
+    .section + .section {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .section-title {
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #c9d3e6;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .label {
+      min-width: 0;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .value {
+      flex: 0 0 auto;
+      min-width: 48px;
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .range-wrap {
+      display: grid;
+      grid-template-columns: 1fr 54px;
+      align-items: center;
+      gap: 10px;
+    }
+    select.select-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    select.select-input option {
+      background: #111723;
+      color: var(--text);
+    }
+    input[type="range"] {
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      outline: none;
+      background: rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 0;
+      box-shadow: 0 0 0 5px rgba(110, 168, 255, 0.12);
+    }
+    .toggle-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 0;
+    }
+    .switch {
+      position: relative;
+      width: 46px;
+      height: 26px;
+      flex: 0 0 auto;
+    }
+    .switch input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.13);
+      transition: 0.2s ease;
+    }
+    .switch-track::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 3px;
+      left: 3px;
+      border-radius: 50%;
+      background: #fff;
+      transition: 0.2s ease;
+    }
+    .switch input:checked + .switch-track {
+      background: var(--accent);
+    }
+    .switch input:checked + .switch-track::after {
+      transform: translateX(20px);
+    }
+    .colors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    .color-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: var(--card);
+    }
+    .color-name {
+      font-size: 13px;
+      color: #dce4f2;
+    }
+    .color-input {
+      width: 38px;
+      height: 30px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    button {
+      flex: 1;
+      min-height: 42px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.11);
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    @media (max-width: 760px) {
+      .panel-toggle { top: 12px; right: 12px; }
+      .title { top: 14px; left: 15px; }
+      .title p { display: none; }
+      .panel { top: auto; right: 10px; bottom: 10px; left: 10px; width: auto; max-height: 45vh; padding: 14px; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="viewport"></div>
+    <div class="title">
+      <h1>3D Cube Test</h1>
+      <p>Three.js Cube</p>
+    </div>
+    <button id="togglePanel" class="panel-toggle" type="button">⚙ Tùy chỉnh</button>
+    <aside class="panel" id="settingsPanel" hidden>
+      <div class="section">
+        <div class="section-title">Lưới trên khối</div>
+        <div class="toggle-line">
+          <span class="label">Bật lưới bề mặt</span>
+          <label class="switch">
+            <input id="enableFaceGrid" type="checkbox" />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <select id="gridSubdivisions" class="select-input">
+          <option value="5">5×5</option>
+          <option value="10">10×10</option>
+        </select>
+      </div>
+      <div class="section">
+        <div class="section-title">Xoay</div>
+        <div class="toggle-line">
+          <span class="label">Tự động xoay</span>
+          <label class="switch">
+            <input id="autoRotate" type="checkbox" uncheck />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="control-row">
+          <span class="label">Tốc độ xoay</span>
+          <span class="value" id="speedValue">1.00×</span>
+        </div>
+        <div class="range-wrap">
+          <input id="speed" type="range" min="0" max="10" step="0.05" value="1" />
+          <span></span>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Kích thước</div>
+        <div class="control-row">
+          <span class="label">Kích thước cube</span>
+          <span class="value" id="sizeValue">2.00</span>
+        </div>
+        <div class="range-wrap">
+          <input id="size" type="range" min="0.5" max="5" step="0.05" value="2" />
+          <span></span>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Màu từng mặt</div>
+        <div class="colors">
+          <div class="color-item"><span class="color-name">Mặt trước</span><input class="color-input" id="front" type="color" value="#4f8cff" /></div>
+          <div class="color-item"><span class="color-name">Mặt sau</span><input class="color-input" id="back" type="color" value="#ff5f6d" /></div>
+          <div class="color-item"><span class="color-name">Mặt trái</span><input class="color-input" id="left" type="color" value="#33d69f" /></div>
+          <div class="color-item"><span class="color-name">Mặt phải</span><input class="color-input" id="right" type="color" value="#ffd166" /></div>
+          <div class="color-item"><span class="color-name">Mặt trên</span><input class="color-input" id="top" type="color" value="#b47cff" /></div>
+          <div class="color-item"><span class="color-name">Mặt dưới</span><input class="color-input" id="bottom" type="color" value="#ff8a4c" /></div>
+        </div>
+        <div class="button-row">
+          <button id="resetColors">Màu mặc định</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Không gian 3D</div>
+        <div class="toggle-line">
+          <span class="label">Lưới sàn tọa độ</span>
+          <label class="switch">
+            <input id="showGrid" type="checkbox" checked />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="toggle-line">
+          <span class="label">Trục X / Y / Z</span>
+          <label class="switch">
+            <input id="showAxes" type="checkbox" checked />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="resetView">Đặt lại góc nhìn</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+    const viewport = document.getElementById("viewport");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b12);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(5.5, 4.2, 7.2);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    viewport.appendChild(renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.055;
+    controls.minDistance = 3;
+    controls.maxDistance = 18;
+    controls.autoRotate = false;
+    controls.autoRotateSpeed = 1.0;
+    controls.target.set(0, 0, 0);
+    const floorGrid = new THREE.GridHelper(20, 20, 0x46536d, 0x222a38);
+    floorGrid.position.set(0, 0, 0);
+    scene.add(floorGrid);
+    const axes = new THREE.AxesHelper(4);
+    axes.position.set(0, 0, 0);
+    scene.add(axes);
+    const defaultColors = {
+      front: "#4f8cff",
+      back: "#ff5f6d",
+      left: "#33d69f",
+      right: "#ffd166",
+      top: "#b47cff",
+      bottom: "#ff8a4c"
+    };
+    const cubeGroup = new THREE.Group();
+    cubeGroup.position.set(0, 1, 0);
+    scene.add(cubeGroup);
+    let cube;
+    let gridLinesGroup;
+    const materials = [
+      new THREE.MeshBasicMaterial({ color: defaultColors.right }),
+      new THREE.MeshBasicMaterial({ color: defaultColors.left }),
+      new THREE.MeshBasicMaterial({ color: defaultColors.top }),
+      new THREE.MeshBasicMaterial({ color: defaultColors.bottom }),
+      new THREE.MeshBasicMaterial({ color: defaultColors.front }),
+      new THREE.MeshBasicMaterial({ color: defaultColors.back })
+    ];
+    function buildFaceGridLines(size, subdivisions) {
+      const group = new THREE.Group();
+      const lineMaterial = new THREE.LineBasicMaterial({ color:0x00, transparent: true, opacity: 0.4 });
+      const step = size / subdivisions;
+      const halfSize = size / 2;
+      for (let i = 0; i <= subdivisions; i++) {
+        const pos = -halfSize + i * step;
+        let g1 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, pos, halfSize), new THREE.Vector3(halfSize, pos, halfSize)]);
+        let g2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, -halfSize, halfSize), new THREE.Vector3(pos, halfSize, halfSize)]);
+        group.add(new THREE.Line(g1, lineMaterial), new THREE.Line(g2, lineMaterial));
+        let g3 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, pos, -halfSize), new THREE.Vector3(halfSize, pos, -halfSize)]);
+        let g4 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, -halfSize, -halfSize), new THREE.Vector3(pos, halfSize, -halfSize)]);
+        group.add(new THREE.Line(g3, lineMaterial), new THREE.Line(g4, lineMaterial));
+        let g5 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, halfSize, pos), new THREE.Vector3(halfSize, halfSize, pos)]);
+        let g6 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, halfSize, -halfSize), new THREE.Vector3(pos, halfSize, halfSize)]);
+        group.add(new THREE.Line(g5, lineMaterial), new THREE.Line(g6, lineMaterial));
+        let g7 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, -halfSize, pos), new THREE.Vector3(halfSize, -halfSize, pos)]);
+        let g8 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, -halfSize, -halfSize), new THREE.Vector3(pos, -halfSize, halfSize)]);
+        group.add(new THREE.Line(g7, lineMaterial), new THREE.Line(g8, lineMaterial));
+        let g9 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(halfSize, -halfSize, pos), new THREE.Vector3(halfSize, halfSize, pos)]);
+        let g10 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(halfSize, pos, -halfSize), new THREE.Vector3(halfSize, pos, halfSize)]);
+        group.add(new THREE.Line(g9, lineMaterial), new THREE.Line(g10,lineMaterial));
+        let g11 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, -halfSize, pos), new THREE.Vector3(-halfSize, halfSize, pos)]);
+        let g12 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-halfSize, pos, -halfSize), new THREE.Vector3(-halfSize, pos, halfSize)]);
+        group.add(new THREE.Line(g11, lineMaterial), new THREE.Line(g12, lineMaterial));
+      }
+      return group;
+    }
+    function createCube(subdivisions = 5, showFaceGrid = false) {
+      if (cube) cubeGroup.remove(cube);
+      if (gridLinesGroup) cubeGroup.remove(gridLinesGroup);
+      const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+      cube = new THREE.Mesh(cubeGeometry, materials);
+      cubeGroup.add(cube);
+      gridLinesGroup = buildFaceGridLines(2, subdivisions);
+      gridLinesGroup.visible = showFaceGrid;
+      cubeGroup.add(gridLinesGroup);
+    }
+    createCube(5, false);
+    const enableFaceGridInput = document.getElementById("enableFaceGrid");
+    const gridSubdivisionsSelect = document.getElementById("gridSubdivisions");
+    const autoRotateInput = document.getElementById("autoRotate");
+    const speedInput = document.getElementById("speed");
+    const speedValue = document.getElementById("speedValue");
+    const sizeInput = document.getElementById("size");
+    const sizeValue = document.getElementById("sizeValue");
+    const showGridInput = document.getElementById("showGrid");
+    const showAxesInput = document.getElementById("showAxes");
+    const resetViewButton = document.getElementById("resetView");
+    const resetColorsButton = document.getElementById("resetColors");
+    const togglePanelButton = document.getElementById("togglePanel");
+    const settingsPanel = document.getElementById("settingsPanel");
+    togglePanelButton.addEventListener("click", () => {
+      const isOpen = !settingsPanel.hidden;
+      settingsPanel.hidden = isOpen;
+      togglePanelButton.textContent = isOpen ? "⚙ Tùy chỉnh" : "✕ Đóng tùy chỉnh";
+    });
+    enableFaceGridInput.addEventListener("change", () => {
+      if (gridLinesGroup) {
+        gridLinesGroup.visible = enableFaceGridInput.checked;
+      }
+    });
+    gridSubdivisionsSelect.addEventListener("change", () => {
+      const subs = parseInt(gridSubdivisionsSelect.value, 10);
+      createCube(subs, enableFaceGridInput.checked);
+    });
+    autoRotateInput.addEventListener("change", () => {
+      controls.autoRotate = autoRotateInput.checked;
+    });
+    speedInput.addEventListener("input", () => {
+      const speed = Number(speedInput.value);
+      controls.autoRotateSpeed = speed;
+      speedValue.textContent = `${speed.toFixed(2)}×`;
+    });
+    sizeInput.addEventListener("input", () => {
+      const size = Number(sizeInput.value);
+      cubeGroup.scale.setScalar(size / 2);
+      sizeValue.textContent = size.toFixed(2);
+    });
+    const colorInputs = {
+      front: document.getElementById("front"),
+      back: document.getElementById("back"),
+      left: document.getElementById("left"),
+      right: document.getElementById("right"),
+      top: document.getElementById("top"),
+      bottom: document.getElementById("bottom")
+    };
+    const materialMap = { right: 0, left: 1, top: 2, bottom: 3, front: 4, back: 5 };
+    for (const [face, input] of Object.entries(colorInputs)) {
+      input.addEventListener("input", () => {
+        materials[materialMap[face]].color.set(input.value);
+      });
+    }
+    resetColorsButton.addEventListener("click", () => {
+      for (const [face, input] of Object.entries(colorInputs)) {
+        input.value = defaultColors[face];
+        materials[materialMap[face]].color.set(defaultColors[face]);
+      }
+    });
+    showGridInput.addEventListener("change", () => {
+      floorGrid.visible = showGridInput.checked;
+    });
+    showAxesInput.addEventListener("change", () => {
+      axes.visible = showAxesInput.checked;
+    });
+    resetViewButton.addEventListener("click", () => {
+      camera.position.set(5.5, 4.2, 7.2);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    });
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    cubeGroup.scale.setScalar(Number(sizeInput.value) / 2);
+    animate();
+  </script>
+</body>
+</html>
